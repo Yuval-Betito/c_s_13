@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from .models import User, Customer
 import json
 import re
@@ -34,18 +35,18 @@ class RegisterForm(forms.ModelForm):
 
         # Check password length
         if len(password) < config['password_length']:
-            raise ValidationError(f"הסיסמה חייבת להיות לפחות {config['password_length']} תווים.")
+            raise ValidationError(f"הסיסמא חייבת להיות לפחות {config['password_length']} תווים.")
 
         # Check for uppercase, lowercase, digits, and special characters
         complexity = config['password_complexity']
         if complexity['uppercase'] and not re.search(r'[A-Z]', password):
-            raise ValidationError("הסיסמה חייבת לכלול אותיות גדולות.")
+            raise ValidationError("הסיסמא חייבת לכלול אותיות גדולות.")
         if complexity['lowercase'] and not re.search(r'[a-z]', password):
-            raise ValidationError("הסיסמה חייבת לכלול אותיות קטנות.")
+            raise ValidationError("הסיסמא חייבת לכלול אותיות קטנות.")
         if complexity['digits'] and not re.search(r'\d', password):
-            raise ValidationError("הסיסמה חייבת לכלול ספרות.")
+            raise ValidationError("הסיסמא חייבת לכלול ספרות.")
         if complexity['special_characters'] and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            raise ValidationError("הסיסמה חייבת לכלול תווים מיוחדים.")
+            raise ValidationError("הסיסמא חייבת לכלול תווים מיוחדים.")
 
         # Prevent using common passwords if enabled
         if config.get('prevent_dictionary', False):
@@ -54,9 +55,9 @@ class RegisterForm(forms.ModelForm):
                 with open(common_passwords_path, 'r') as f:
                     common_passwords = f.read().splitlines()
                 if password.lower() in [p.lower() for p in common_passwords]:
-                    raise ValidationError("הסיסמה שלך נפוצה מדי, אנא בחר סיסמה אחרת.")
+                    raise ValidationError("הסיסמא שלך נפוצה מדי, אנא בחר סיסמא אחרת.")
             except FileNotFoundError:
-                # Log a warning or handle as needed
+                # אם קובץ המילון לא קיים, ניתן לדלג או לזרוק אזהרה
                 pass
 
         return password
@@ -83,4 +84,60 @@ class RegisterForm(forms.ModelForm):
             user.save()
             # ניתן להוסיף שמירת היסטוריית סיסמאות כאן אם יש מודל מתאים
         return user
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label="שם משתמש",
+        max_length=150,
+        widget=forms.TextInput(attrs={'autofocus': True, 'class': 'form-control'})
+    )
+    password = forms.CharField(
+        label="סיסמא",
+        strip=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+
+
+class PasswordChangeCustomForm(forms.Form):
+    """טופס מותאם אישית לשינוי סיסמא."""
+    old_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="סיסמא נוכחית"
+    )
+    new_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="סיסמא חדשה"
+    )
+    confirm_new_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="אימות סיסמא חדשה"
+    )
+
+    def clean_new_password(self):
+        new_password = self.cleaned_data.get('new_password')
+
+        # Load configuration from the JSON file
+        config_path = settings.BASE_DIR / 'password_config.json'
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        # Check password length
+        if len(new_password) < config['password_length']:
+            raise ValidationError(f"הסיסמא חייבת להיות לפחות {config['password_length']} תווים.")
+
+        # Check for uppercase, lowercase, digits, and special characters
+        complexity = config['password_complexity']
+        if complexity['uppercase'] and not re.search(r'[A-Z]', new_password):
+            raise ValidationError("הסיסמא חייבת לכלול אותיות גדולות.")
+        if complexity['lowercase'] and not re.search(r'[a-z]', new_password):
+            raise ValidationError("הסיסמא חייבת לכלול אותיות קטנות.")
+        if complexity['digits'] and not re.search(r'\d', new_password):
+            raise ValidationError("הסיסמא חייבת לכלול ספרות.")
+        if complexity['special_characters'] and not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password):
+            raise ValidationError("הסיסמא חייבת לכלול תווים מיוחדים.")
+
+        # Prevent using common passwords if enabled
+        if config.get('prevent_dictionary', False):
+            common_pas
 
