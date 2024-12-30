@@ -6,6 +6,7 @@ import hashlib
 from django.core.validators import RegexValidator
 
 
+
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None):
         if not email:
@@ -20,8 +21,6 @@ class UserManager(BaseUserManager):
     def create_superuser(self, username, email, password):
         user = self.create_user(username, email, password)
         user.is_admin = True
-        user.is_superuser = True  # Set superuser permissions
-        user.is_staff = True        # Set staff permissions
         user.save(using=self._db)
         return user
 
@@ -31,8 +30,6 @@ class User(AbstractBaseUser):
     email = models.EmailField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)      # Added is_staff field
-    is_superuser = models.BooleanField(default=False)  # Added is_superuser field
 
     objects = UserManager()
 
@@ -60,31 +57,13 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.username
 
-    # Permissions methods required by Django admin
-    def has_perm(self, perm, obj=None):
-        return self.is_admin
-
-    def has_module_perms(self, app_label):
-        return self.is_admin
-
-
 class Customer(models.Model):
-    firstname = models.CharField(max_length=50)
-    lastname = models.CharField(max_length=50)
+    firstname = models.CharField(max_length=50, unique=True)
+    lastname = models.CharField(max_length=50, unique=True)
     customer_id = models.CharField(max_length=10, unique=True)
     email = models.EmailField(max_length=100, unique=True)
-    phone_number = models.CharField(
-        max_length=10,
-        validators=[
-            RegexValidator(
-                regex=r'^05\d{8}$',
-                message='Enter a valid Israeli phone number starting with 05.',
-                code='invalid_phone_number'
-            ),
-        ],
-    )
+    phone_number = models.CharField(max_length=10)
 
-    def __str__(self):
-        return f"{self.firstname} {self.lastname} ({self.customer_id})"
-
+    objects = UserManager()
+    REQUIRED_FIELDS = ['firstname','lastname','customer_id','email','phone']
 
