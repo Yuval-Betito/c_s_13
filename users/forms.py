@@ -6,6 +6,7 @@ import re
 from django.core.exceptions import ValidationError
 from django.conf import settings  # Import settings to access BASE_DIR
 
+
 class RegisterForm(forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput,
@@ -139,5 +140,48 @@ class PasswordChangeCustomForm(forms.Form):
 
         # Prevent using common passwords if enabled
         if config.get('prevent_dictionary', False):
-            common_pas
+            common_passwords_path = settings.BASE_DIR / 'common_passwords.txt'
+            try:
+                with open(common_passwords_path, 'r') as f:
+                    common_passwords = f.read().splitlines()
+                if new_password.lower() in [p.lower() for p in common_passwords]:
+                    raise ValidationError("הסיסמא שלך נפוצה מדי, אנא בחר סיסמא אחרת.")
+            except FileNotFoundError:
+                pass
 
+        # כאן תוכל להוסיף ולידציה להיסטוריית סיסמאות במידת הצורך
+
+        return new_password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get('new_password')
+        confirm_new_password = cleaned_data.get('confirm_new_password')
+        if new_password and confirm_new_password and new_password != confirm_new_password:
+            raise ValidationError("הסיסמאות החדשות לא תואמות.")
+        return cleaned_data
+
+
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ['firstname', 'lastname', 'customer_id', 'phone_number', 'email']  # השדות בטופס
+
+    def __init__(self, *args, **kwargs):
+        super(CustomerForm, self).__init__(*args, **kwargs)
+        # הגדרת ערך ברירת מחדל לשדה phone_number
+        self.fields['phone_number'].widget.attrs.update({'placeholder': '05', 'pattern': '^05[0-9]{8}$'})
+        self.fields['phone_number'].help_text = 'הזן מספר טלפון ישראלי תקין המתחיל ב-05'
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if not re.match(r'^05\d{8}$', phone_number):
+            raise ValidationError("מספר הטלפון אינו תקין.")
+        return phone_number
+
+    def save(self, commit=True):
+        customer = super().save(commit=False)
+        if commit:
+            customer.save()
+            self.save_m2m()  # לשמירת שדות ManyToMany אם יש
+        return customer
