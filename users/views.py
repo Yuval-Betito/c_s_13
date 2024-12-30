@@ -1,96 +1,76 @@
-import hmac
-import hashlib
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login as django_login
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import login, authenticate
+from django.contrib import messages
+from django.conf import settings
+from django.core.cache import cache
+from .forms import RegisterForm, LoginForm, PasswordChangeCustomForm, CustomerForm
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.views import PasswordChangeView
-from django.urls import reverse_lazy
+from .models import PasswordHistory  # If you implement password history
 
-from .forms import RegisterForm,CustomerForm
-from .models import User
-
-def verify_password(stored_password, entered_password):
-    """Verify password by comparing entered password with the stored hash"""
-    # Split the stored password into salt and hash
-    salt, stored_hash = stored_password.split('$')
-
-    # Re-hash the entered password with the stored salt
-    entered_hash = hmac.new(salt.encode(), entered_password.encode(), hashlib.sha256).hexdigest()
-
-    # Compare the hashes
-    return stored_hash == entered_hash
-
-
-def user_login(request):
-    """Function to handle user login"""
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-        # Authenticate user with Django's built-in method
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            django_login(request, user)
-            return redirect('add_customer')  # Redirect to add_customer
-        else:
-            return render(request, 'users/login.html', {'error': 'Invalid credentials'})
-
-    return render(request, 'users/login.html')
-
-
-def register(request):
-    """Function to handle user registration"""
+def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            form.save()  # Save the user to the database
-            return redirect('login')  # Redirect to the login page
+            form.save()
+            messages.success(request, 'Registration successful! You can now log in.')
+            return redirect('login')  # Ensure you have a URL named 'login'
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = RegisterForm()
-
     return render(request, 'users/register.html', {'form': form})
 
-
-def home(request):
-    """Function to render the home page"""
-    return render(request, 'users/home.html')  # Return a home template
-
-
-class CustomPasswordChangeView(PasswordChangeView):
-    """Custom view for handling password change"""
-    template_name = 'users/password_change.html'
-    success_url = reverse_lazy('password_change_done')  # Redirect after success
-
-    def form_valid(self, form):
-        """Update the session after password change"""
-        response = super().form_valid(form)
-        update_session_auth_hash(self.request, form.user)  # Keep the user logged in
-        return response
-
-
-def password_change_done(request):
-    """Function to display the password change success message"""
-    return render(request, 'users/password_change_done.html')
-
-
-def create_customer(request):
-    """Handle creating a new customer"""
-    customer = None
-
+def login_view(request):
     if request.method == 'POST':
-        form = CustomerForm(request.POST)
-        phone_number = request.POST.get('phone_number', '').strip()
+        form = LoginForm(request, data=request.POST)
+        username = request.POST.get('username')
+        cache_key = f'login_attempts_{username}'
+        attempts = cache.get(cache_key, 0)
 
-        if form.is_valid() and phone_number.startswith("05") and phone_number.isdigit() and len(phone_number) == 10:
-            customer = form.save(commit=False)
-            customer.phone_number = phone_number
-            customer.save()
-            form = CustomerForm()  # איפוס הטופס לאחר שמירה
+        if attempts >= settings.PASSWORD_CONFIG['login_attempts']:
+            messages.error(request, 'You have reached the maximum number of login attempts. Please try again later.')
+            return render(request, 'users/login.html', {'form': form})
+
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            cache.delete(cache_key)  # Reset the number of attempts after successful login
+            return redirect('home')  # Ensure you have a URL named 'home'
         else:
-            form.add_error('phone_number', "Please enter a valid Israeli phone number.")
-
+            attempts += 1
+            cache.set(cache_key, attempts, timeout=300)  # Lockout for 5 minutes
+            remaining_attempts = settings.PASSWORD_CONFIG['login_attempts'] - attempts
+            messages.error(request, f'Invalid username or password. You have {remaining_attempts} attempts remaining.')
     else:
-        form = CustomerForm()
+        form = LoginForm()
+    return render(request, 'users/login.html', {'form': form})
 
-    return render(request, 'users/create_customer.html', {'form': form, 'customer': customer})
+@login_required
+def home_view(request):
+    return render(request, 'users/home.html')
+
+@login_required
+def change_password_view(request):
+    if request.method == 'POST':
+        form = PasswordChangeCustomForm(request.POST, initial={'user': request.user})
+        if form.is_valid():
+            old_password = form.cleaned_data.get('old_password')
+            new_password = form.cleaned_data.get('new_password')
+            user = authenticate(username=request.user.username, password=old_password)
+            if user:
+                # Save current password to history before changing
+                PasswordHistory.objects.create(user=user, password=user.password)
+
+                user.set_password(new_password)
+                user.save()
+                update_session_auth_hash(request, user)  # Important to keep the session active
+                messages.success(request, 'Your password has been successfully changed!')
+                return redirect('home')
+            else:
+                messages.error(request, 'The current password is incorrect.')
+    else:
+        form = PasswordChangeCustomForm()
+    return render(request, 'users/change_password.html', {'form': form})
+
+# Add other views as needed
