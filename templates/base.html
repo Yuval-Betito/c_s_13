@@ -1,41 +1,25 @@
+<!-- templates/users/base.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Application{% endblock %}</title>
-    <!-- ניתן להוסיף קישורים ל-CSS, ג'אווה סקריפט וכו' -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <title>Communication LTD</title>
+    <!-- Add CSS links here if any -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
-
-    <header>
-        <nav>
-            <ul>
-                <li><a href="{% url 'home' %}">Home</a></li>
-                {% if user.is_authenticated %}
-                    <li><a href="{% url 'password_change' %}">Change Password</a></li>
-                    <li><a href="{% url 'logout' %}">Logout</a></li>
-                {% else %}
-                    <li><a href="{% url 'login' %}">Login</a></li>
-                    <li><a href="{% url 'register' %}">Register</a></li>
-                    <li><a href="{% url 'create_customer' %}">Create customer</a></li>
-
-                {% endif %}
-            </ul>
-        </nav>
-    </header>
-
-    <main>
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
         {% block content %}
-        <!-- התוכן הספציפי לכל דף ייכנס כאן -->
         {% endblock %}
-    </main>
-
-    <footer>
-        <p>&copy; 2024 Communication LTD</p>
-    </footer>
-
+    </div>
 </body>
 </html>
 
