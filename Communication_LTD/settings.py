@@ -16,7 +16,7 @@ import json
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# קריאת קובץ קונפיגורציה לסיסמאות
+# Load password configuration from JSON file
 with open(BASE_DIR / 'password_config.json') as config_file:
     PASSWORD_CONFIG = json.load(config_file)
 
@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "users",  # האפליקציה users
+    "users",  # The 'users' app
 ]
 
 MIDDLEWARE = [
@@ -60,7 +60,7 @@ ROOT_URLCONF = "Communication_LTD.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates'],  # תיקיית templates
+        "DIRS": [BASE_DIR / 'templates'],  # Templates directory
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -90,14 +90,14 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
-# כיוון שאנחנו מבצעים ולידציה מותאמת אישית בטפסים, נוכל להסיר את הוולידטורים המובנים:
+# Since we are performing custom validation in forms, we can remove the built-in validators
 AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en-us"  # Changed from "he"
 
 TIME_ZONE = "UTC"
 
@@ -116,10 +116,10 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# הגדרת מודל משתמש מותאם אישית
-AUTH_USER_MODEL = 'users.User'  # החלף את 'users' בשם האפליקציה שלך אם שונה
+# Custom user model
+AUTH_USER_MODEL = 'users.User'  # Replace 'users' with your app name if different
 
-# הגדרת מערכת Cache לניהול ניסיונות הכניסה
+# Cache configuration for managing login attempts
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -127,5 +127,4 @@ CACHES = {
     }
 }
 
-# אפשרויות נוספות בהתאם לצורך
-
+# Additional settings as needed
