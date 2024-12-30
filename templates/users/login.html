@@ -1,26 +1,19 @@
-<!-- templates/users/login.html -->
-
-{% extends 'users/base.html' %}
-
-{% block content %}
-  <h2>Login</h2>
-  <form method="post">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h2>Login</h2>
+<form method="post">
     {% csrf_token %}
-    <div class="form-group">
-      {{ form.username.label_tag }}
-      {{ form.username }}
-      {% for error in form.username.errors %}
-        <div class="text-danger">{{ error }}</div>
-      {% endfor %}
-    </div>
-    <div class="form-group">
-      {{ form.password.label_tag }}
-      {{ form.password }}
-      {% for error in form.password.errors %}
-        <div class="text-danger">{{ error }}</div>
-      {% endfor %}
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-  </form>
-  <a href="{% url 'forgot_password' %}">Forgot Password?</a>
-{% endblock %}
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username">
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password">
+    <button type="submit">Login</button>
+</form>
+
+</body>
+</html>
