@@ -20,8 +20,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, username, email, password):
         user = self.create_user(username, email, password)
         user.is_admin = True
-        user.is_superuser = True  # הגדרת הרשאות סופר-יוזר
-        user.is_staff = True        # הגדרת הרשאות staff
+        user.is_superuser = True  # Set superuser permissions
+        user.is_staff = True        # Set staff permissions
         user.save(using=self._db)
         return user
 
@@ -31,8 +31,8 @@ class User(AbstractBaseUser):
     email = models.EmailField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)      # הוספת שדה is_staff
-    is_superuser = models.BooleanField(default=False)  # הוספת שדה is_superuser
+    is_staff = models.BooleanField(default=False)      # Added is_staff field
+    is_superuser = models.BooleanField(default=False)  # Added is_superuser field
 
     objects = UserManager()
 
@@ -78,7 +78,7 @@ class Customer(models.Model):
         validators=[
             RegexValidator(
                 regex=r'^05\d{8}$',
-                message='הזן מספר טלפון ישראלי תקין המתחיל ב-05',
+                message='Enter a valid Israeli phone number starting with 05.',
                 code='invalid_phone_number'
             ),
         ],
@@ -86,4 +86,5 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"{self.firstname} {self.lastname} ({self.customer_id})"
+
 
