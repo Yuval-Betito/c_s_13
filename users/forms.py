@@ -185,3 +185,4 @@ class CustomerForm(forms.ModelForm):
             customer.save()
             self.save_m2m()  # לשמירת שדות ManyToMany אם יש
         return customer
+
